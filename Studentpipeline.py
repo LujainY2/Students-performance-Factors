@@ -117,8 +117,8 @@ def Remove_duplicates(df):
 
 # =========================================
 # 7. Feature Engineering
-# =========================================   s
-def add_features():
+# =========================================   
+def add_features(df):
     df = df.copy 
     # ordener : there is relation bet values ex low,m,l
     # nominal : no relation like female
@@ -153,10 +153,36 @@ def add_features():
     print(f'Added {len(new_col)} Features :{new_col}')
     
     return df
+# =========================================
+# 8. Generate Summary
+# =========================================  
 
-
+def general_summary(df):
+    print("\n === Analytics Summary ===")
+    print(f"Total Students:{len(df)} Students")
     
-
+    avg_score = df["Exam_Score"].mean()
+    print(f"Avg Exam Score : {avg_score:.1f} %")
+    
+    
+    pass_rate = (df[Pass_Fail]=="Pass").mean()*100
+    print(f"Pass Rate {pass_rate:.1f} %")
+    # Statistics by Motivation 
+    
+    print("\n Score by Motivation Level:")
+    
+    mot_sts = df.groupby(
+        "Motivation_Level",
+        observed = True).agg(
+            avg_score = ("Exam_score","mean"),
+            count = ("Exam_score","count")
+            
+        ).round(1)
+        
+    print(mot_sts.to_string(index = True))
+    
+    return df
+    
  
 
 df = ingest_data("StudentPerformanceFactors.csv")
