@@ -49,9 +49,8 @@ def inspect_data(df):
     )
 
     categorical_col = len(
-        df.select_dtypes(include=["object", "category", "string"]).columns
-    )
-
+    df.select_dtypes(include=["object", "category"]).columns)
+    
     print(f"Numeric columns: {numeric_col}")
     print(f"Categorical columns: {categorical_col}")
     
@@ -66,13 +65,16 @@ def handle_missing(df):
     df =df.copy()
     
     #  fill missing values in categorical columns 
-    for col in df.select_dtypes(include=["object","str"]).columns:
-        if df[col].isnull().sum()>0:
-            fill_value = df[col].mode()[0]
-            
-            df[col] = df[col].fillna(fill_value)
-            
-            print(f'filled {col} with mode:{fill_value}')
+    for col in df.select_dtypes(include=["object", "category"]).columns:
+        if df[col].isnull().sum() > 0:
+            mode_values = df[col].mode()
+
+            if not mode_values.empty:
+                fill_value = mode_values.iloc[0]
+
+                df[col] = df[col].fillna(fill_value)
+
+                print(f"Filled {col} with mode: {fill_value}")
             
     #  fill missing values in numeric columns 
     for col in df.select_dtypes(include=["number"]).columns:
@@ -83,9 +85,10 @@ def handle_missing(df):
             
             print(f'filled {col} with median:{fill_value}')
 
-# check missing values 
-remaining_nulls = df.isnull().sum().sum()
-print(f'Remaining nulls:{remaining_nulls}')
+    # check missing values 
+    remaining_nulls = df.isnull().sum().sum()
+    print(f'Remaining nulls:{remaining_nulls}')
+    return df
 
 # =========================================
 # 5. Standarize text
@@ -93,13 +96,16 @@ print(f'Remaining nulls:{remaining_nulls}')
 
 def Standarize_text(df):
     df = df.copy()
-    categorical_col = df.select_dtypes(include=['object','str']).columns
-    
-    for col in categorical_col:
-        df[col]= df[col].strip().str.title()
-        
-    print(f"Standarized {len(categorical_col)} categorical columns")
-    
+
+    categorical_cols = df.select_dtypes(
+        include=["object", "string"]
+    ).columns
+
+    for col in categorical_cols:
+        df[col] = df[col].str.strip().str.title()
+
+    print(f"Standardized {len(categorical_cols)} categorical columns")
+
     return df
 
 # =========================================
@@ -119,42 +125,42 @@ def Remove_duplicates(df):
 # 7. Feature Engineering
 # =========================================   
 def add_features(df):
-    df = df.copy 
+    df = df.copy()
     # ordener : there is relation bet values ex low,m,l
     # nominal : no relation like female
     # Encode 
-    df['Motivation_score'] = df['Motivation_score'].map(
+    df['Motivation_Level'] = df['Motivation_Level'].map(
         {
             "Low":1,
             "Medium":2,
             "High":3
         }
     ) 
-    
-    df['Has_internet'] = df['Internet_Access'].map(
+
+    df['Has_Internet'] = df['Internet_Access'].map(
             {
                 "Yes":1,
                 "No":0,
             }
         ) 
     df['Pass_Fail'] = np.where(
-        df['Exam_score']>=65,
+        df['Exam_Score']>=65,
         "Pass" ,"Fail"
     )
     # Create Score Bands 
     df["Score_Band"] = pd.cut(
-        df["Exam_Score"],
-        bins = [0,60,70,80,90,101]
-        Labels= ["Very Low","Low","Medium","High","Very High"]
-    )
+    df["Exam_Score"],
+    bins=[0, 60, 70, 80, 90, 101],
+    labels=["Very Low", "Low", "Medium", "High", "Very High"]
+)
     
-    new_col = ['Motivation_score','Has_internet','Pass_Fail',"Score_Band"]
+    new_col = ['Motivation_Level','Has_internet','Pass_Fail',"Score_Band"]
     
     print(f'Added {len(new_col)} Features :{new_col}')
     
     return df
 # =========================================
-# 8. Generate Summary
+# 8. Summary
 # =========================================  
 
 def general_summary(df):
@@ -165,7 +171,7 @@ def general_summary(df):
     print(f"Avg Exam Score : {avg_score:.1f} %")
     
     
-    pass_rate = (df[Pass_Fail]=="Pass").mean()*100
+    pass_rate = (df["Pass_Fail"]=="Pass").mean()*100
     print(f"Pass Rate {pass_rate:.1f} %")
     # Statistics by Motivation 
     
@@ -174,8 +180,8 @@ def general_summary(df):
     mot_sts = df.groupby(
         "Motivation_Level",
         observed = True).agg(
-            avg_score = ("Exam_score","mean"),
-            count = ("Exam_score","count")
+            avg_score = ("Exam_Score","mean"),
+            count = ("Exam_Score","count")
             
         ).round(1)
         
@@ -183,12 +189,48 @@ def general_summary(df):
     
     return df
     
- 
+def run_pipeline(filepath): 
+    print("="*50)
+    print("Cleaning pipeline")
+    print("="*50)
 
-df = ingest_data("StudentPerformanceFactors.csv")
+    print("Ingest Data")
+    df = ingest_data(filepath)
+    
+    print("Inspect Data")
+    print()
+    df = inspect_data(df)
+    
+    print("\n --- Cleaning ---- ")
+    
+    print("Standarization")
+    df = Standarize_text(df)
+    
+    print("Removing duplicates")
+    df = Remove_duplicates(df)
+    
+    print("Handeling Missing Values")
+    df = handle_missing(df)
+    
+    print("\n ---- Enrichment ----")
+    df = add_features(df)
+    
+    print("Analytics Summary")
+    df = general_summary(df)
+    
+    print("\n"+ "="*50)
+    print(
+        f"Pipeline Completed {df.shape[0]} rows,{df.shape[1]} columns"
+    )
+    print("\n"+ "="*50)
+    return df 
 
-# Display the first five rows
-print(df.head())
 
-# Inspect the dataset
-inspect_data(df)
+if __name__=="__main__":
+    clean_data= run_pipeline("StudentPerformanceFactors.csv")
+    
+    clean_data.to_csv("Cleaned_StudentPerformance.csv")
+    print("cleaned data Saved Successfully!")
+
+
+
