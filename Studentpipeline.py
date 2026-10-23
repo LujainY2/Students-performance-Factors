@@ -118,7 +118,44 @@ def Remove_duplicates(df):
 # =========================================
 # 7. Feature Engineering
 # =========================================   s
+def add_features():
+    df = df.copy 
+    # ordener : there is relation bet values ex low,m,l
+    # nominal : no relation like female
+    # Encode 
+    df['Motivation_score'] = df['Motivation_score'].map(
+        {
+            "Low":1,
+            "Medium":2,
+            "High":3
+        }
+    ) 
+    
+    df['Has_internet'] = df['Internet_Access'].map(
+            {
+                "Yes":1,
+                "No":0,
+            }
+        ) 
+    df['Pass_Fail'] = np.where(
+        df['Exam_score']>=65,
+        "Pass" ,"Fail"
+    )
+    # Create Score Bands 
+    df["Score_Band"] = pd.cut(
+        df["Exam_Score"],
+        bins = [0,60,70,80,90,101]
+        Labels= ["Very Low","Low","Medium","High","Very High"]
+    )
+    
+    new_col = ['Motivation_score','Has_internet','Pass_Fail',"Score_Band"]
+    
+    print(f'Added {len(new_col)} Features :{new_col}')
+    
+    return df
 
+
+    
 
  
 
